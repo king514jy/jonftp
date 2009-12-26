@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="400" height="118" creationComplete="onLoad()">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.validators.StringValidator;
+			import mx.validators.Validator;
+			import mx.events.ValidationResultEvent;
+			import mx.validators.RegExpValidator;
+			import mx.managers.PopUpManager;
+			import mx.controls.Alert;
+			
+			private function closeMe():void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/060.png")]
+			private var i060:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/015.png")]
+			private var i015:Class
+			
+			
+			private var _handler:Function;	//_handler(string);
+			//private var _pattern:*;
+			//private var _errorMsg:String;
+			
+			private var _reg:Validator// = new RegExpValidator();
+			
+			private function onLoad():void
+			{
+				reqField.setFocus();
+			}
+			
+			/**
+			 * add handler
+			 * 
+			 * @param hFunc			_handler(string);
+			 * @param pattern		regexp, the text should match it
+			 * @param errorMsg		if text does not match regexp, show it
+			 */ 
+			public function handlerFunc(hFunc:Function, pattern:*=null, errorMsg:String=""):void
+			{
+				_handler = hFunc;
+				//_pattern = pattern;
+				//_errorMsg = errorMsg;
+				
+				if(pattern==null)
+				{
+					_reg = new StringValidator();
+					_reg.required = true;
+					_reg.requiredFieldError = "Value can not be empty";
+				}
+				else
+				{
+					_reg = new RegExpValidator()
+					_reg.required = true;
+					(_reg as RegExpValidator).expression = (pattern==null)?"":pattern;
+					_reg.requiredFieldError = "Value can not be empty";
+					(_reg as RegExpValidator).noMatchError = errorMsg;
+				}
+			}
+			
+			private function onPressOK():void
+			{
+				var eve:ValidationResultEvent = _reg.validate(reqField.text);
+				if(eve.type == ValidationResultEvent.INVALID)
+				{
+					Alert.show(eve.message, "ERROR");
+				}
+				else
+				{
+					if(_handler)
+					{
+						_handler(reqField.text);
+					}
+					closeMe();
+				}
+				/*
+				try
+				{
+					if(reqField.text.match(_pattern).length>0)
+					{
+						_handler(reqField.text);
+						closeMe();
+						return;
+					}
+				}
+				catch(e:Error)
+				{
+					//nothing
+				}
+				
+				//show error
+				if(_pattern != null)
+				{
+					Alert.show(_errorMsg);
+				}*/
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:TextInput id="reqField" y="0" right="20" left="20" enter="onPressOK()"/>
+	<mx:ControlBar horizontalAlign="center">
+		<mx:Button label="OK" click="onPressOK()" icon="{i060}"/>
+		<mx:Button label="Cancel" click="closeMe()" icon="{i015}"/>
+	</mx:ControlBar>
+</mx:TitleWindow>

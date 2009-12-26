@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:List xmlns:mx="http://www.adobe.com/2006/mxml" 
+	itemDoubleClick="onDCItem(event)" 
+	doubleClickEnabled="true" 
+	rightClick="createMenu(event)" 
+	itemRollOver="_currentListEvent=event" 
+	itemRollOut="_currentListEvent=null">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.events.MenuEvent;
+			import mx.controls.listClasses.IListItemRenderer;
+			import mx.controls.Menu;
+			import org.gainloss.asftp.utils.GLRemoteFile;
+			import org.gainloss.utils.events.RListEvent;
+			import mx.events.ListEvent;
+			import mx.core.Application
+			
+			[Bindable]
+			[Embed("/mysource/imgs/GiNUX/055.png")]
+			private var i055:Class
+			
+			[Bindable]
+			[Embed("/mysource/imgs/GiNUX/015.png")]
+			private var i015:Class
+			
+			private var _currentListEvent:ListEvent;
+			private var _qMenu:Menu;
+			//private var _qMenuDelItem:NativeMenuItem = new NativeMenuItem("Delete");
+			//private var _qMenuRenameItem:NativeMenuItem = new NativeMenuItem("Rename");
+			
+			private function createMenu(event:MouseEvent):void
+			{
+				if(_qMenu == null)
+				{
+					_qMenu = Menu.createMenu(Application.application as DisplayObjectContainer, myMenuData, false);
+					_qMenu.labelField = "@label";
+					_qMenu.iconField = "@icon";
+					_qMenu.addEventListener(MenuEvent.ITEM_CLICK, onMenuItemSelectedHandler);
+				}
+				
+				_qMenu.hide();
+				_qMenu.show(event.stageX, event.stageY);
+			}
+			
+			private function onDCItem(event:ListEvent):void
+			{
+				var eve:RListEvent = new RListEvent(RListEvent.DOUBLE_CLICK);
+				eve.data = event.itemRenderer.data as GLRemoteFile;
+				this.dispatchEvent(eve);
+			}
+			
+			
+			private function onMenuItemSelectedHandler(event:MenuEvent):void
+			{
+				if(_currentListEvent)
+				{
+					var _type:String
+					switch(event.label)
+					{
+						case "Rename":
+							_type = RListEvent.RENAME;
+							break;
+						case "Delete":
+							_type = RListEvent.DEL;
+							break;
+						case "Download":
+							_type = RListEvent.DOWNLOAD;
+							break;
+					}
+					var eve:RListEvent = new RListEvent(_type);
+					eve.data = _currentListEvent.itemRenderer.data as GLRemoteFile;
+					dispatchEvent(eve);
+				}
+			}
+			
+			/*
+			private function onItemRollOverHandler(event:ListEvent):void
+			{
+				var renderer:IListItemRenderer = event.itemRenderer;
+				if(renderer)
+				{
+					renderer["toolVisible"] = true;
+				}
+			}
+			
+			private function onItemRollOutHandler(event:ListEvent):void
+			{
+				var renderer:IListItemRenderer = event.itemRenderer;
+				if(renderer)
+				{
+					renderer["toolVisible"] = false;
+				}
+			}*/
+		]]>
+	</mx:Script>
+	
+	<mx:XML id="myMenuData">
+	    <root>
+	        <menuitem label="Rename" icon="{i055}"/>
+	        <menuitem label="Delete" icon="{i015}"/>
+	        <menuitem label="Download" icon="{i015}"/>
+	    </root>
+	 </mx:XML>
+	
+	<mx:Metadata>
+		[Event(name="Remote_Item_Double_Click", type="org.gainloss.utils.events.RListEvent")]
+	</mx:Metadata>
+	
+	<mx:itemRenderer>
+		<mx:Component>
+			<mx:HBox width="100%" verticalAlign="middle">
+				<mx:Script>
+					<![CDATA[
+						import org.gainloss.asftp.utils.GLRemoteFile;
+						import org.gainloss.utils.events.RListEvent;
+						
+						[Bindable]
+						[Embed("/mysource/imgs/file.png")]
+						private var fileIcon:Class
+						
+						[Bindable]
+						[Embed("/mysource/imgs/dic.png")]
+						private var dicIcon:Class
+						
+						//[Bindable]
+						//public var toolVisible:Boolean = false;
+					]]>
+				</mx:Script>
+				<mx:Image source="{(data.type=='d'||data.type=='l')?dicIcon:fileIcon}"/>
+				<mx:Label text="{data.name}" 
+					toolTip="{'FileName: '+data.name+'\nSize: '+data.size+' Bytes'}"/>
+				<!--
+				<mx:Spacer width="100%"/>
+				<mx:LinkButton id="renameBtn" icon="{i055}" 
+					toolTip="Rename" 
+					styleName="pageLinkBtn" 
+					visible="{toolVisible}">
+					<mx:click>
+						<![CDATA[
+							var eve:RListEvent = new RListEvent(RListEvent.RENAME);
+							eve.data = data as GLRemoteFile;
+							dispatchEvent(eve);
+						]]>
+					</mx:click>
+				</mx:LinkButton>
+				<mx:LinkButton id="delBtn" icon="{i015}" 
+					toolTip="Delete" 
+					styleName="pageLinkBtn" 
+					visible="{toolVisible}">
+					<mx:click>
+						<![CDATA[
+							var eve:RListEvent = new RListEvent(RListEvent.DEL);
+							eve.data = data as GLRemoteFile;
+							dispatchEvent(eve);
+						]]>
+					</mx:click>
+				</mx:LinkButton>
+				-->
+			</mx:HBox>
+		</mx:Component>
+	</mx:itemRenderer>
+</mx:List>

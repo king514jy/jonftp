@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:FileSystemList xmlns:mx="http://www.adobe.com/2006/mxml" 
+	rightClick="createMenu(event)"
+	itemRollOver="_currentListEvent=event" 
+	itemRollOut="_currentListEvent=null">
+	<mx:Script>
+		<![CDATA[
+			import mx.events.MenuEvent;
+			import mx.controls.listClasses.IListItemRenderer;
+			import mx.controls.Menu;
+			import org.gainloss.asftp.utils.GLRemoteFile;
+			import org.gainloss.utils.events.LListEvent;
+			import mx.events.ListEvent;
+			import mx.core.Application
+			
+			
+			private var _currentListEvent:ListEvent;
+			private var _qMenu:Menu;
+			//private var _qMenuDelItem:NativeMenuItem = new NativeMenuItem("Delete");
+			//private var _qMenuRenameItem:NativeMenuItem = new NativeMenuItem("Rename");
+			
+			private function createMenu(event:MouseEvent):void
+			{
+				if(_qMenu == null)
+				{
+					_qMenu = Menu.createMenu(Application.application as DisplayObjectContainer, myMenuData, false);
+					_qMenu.labelField = "@label";
+					_qMenu.addEventListener(MenuEvent.ITEM_CLICK, onMenuItemSelectedHandler);
+				}
+				
+				_qMenu.hide();
+				_qMenu.show(event.stageX, event.stageY);
+			}
+			
+			
+			private function onMenuItemSelectedHandler(event:MenuEvent):void
+			{
+				if(_currentListEvent)
+				{
+					var _type:String
+					switch(event.label)
+					{
+						case "Upload":
+							_type = LListEvent.UPLOAD;
+							break;
+					}
+					var eve:LListEvent = new LListEvent(_type);
+					eve.data = _currentListEvent.itemRenderer.data as File;
+					dispatchEvent(eve);
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:XML id="myMenuData">
+	    <root>
+	        <menuitem label="Upload"/>
+	    </root>
+	 </mx:XML>
+</mx:FileSystemList>

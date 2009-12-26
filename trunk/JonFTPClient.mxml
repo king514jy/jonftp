@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" 
+	xmlns:ui="org.gainloss.utils.ui.*"
+	height="600" 
+	width="600" 
+	creationComplete="onLoad()" 
+	close="exit()" 
+	showTitleBar="false" 
+	showStatusBar="false">
+	
+	<mx:Style source="plain.css"/>
+	
+	<mx:Script>
+		<![CDATA[
+			import air.update.events.UpdateEvent;
+			
+			import flash.net.navigateToURL;
+			import org.gainloss.asftp.utils.GLRemoteFile;
+			import org.gainloss.asftp.process.group.*;
+			import mx.controls.LinkButton;
+			import mx.events.ListEvent;
+			import org.gainloss.utils.ui.*;
+			import org.gainloss.utils.events.*;
+			import mx.collections.ArrayCollection;
+			import org.gainloss.asftp.events.*;
+			import mx.events.FileEvent;
+			import mx.controls.Alert;
+			import org.gainloss.asftp.process.*;
+			import org.gainloss.asftp.GLFTPClient;
+			import org.gainloss.log.*;
+			import org.gainloss.utils.events.SiteManageEvent;
+			
+			import mx.managers.PopUpManager;
+			
+			import air.update.ApplicationUpdaterUI;
+			import air.update.events.UpdateEvent;
+			import air.update.ApplicationUpdater;
+			
+			[Bindable]
+			[Embed("mysource/icon/icon_032.png")]
+			private var icon_032:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/blue_arrow_up.png")]
+			private var blue_arrow_up:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/017.png")]
+			private var i017:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/045.png")]
+			private var i045:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/computer_add.png")]
+			private var computer_add:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/page_up.png")]
+			private var class_up:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/page_down.png")]
+			private var class_down:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/057.png")]
+			private var i057:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/055.png")]
+			private var i055:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/09refresh.png")]
+			private var i09refresh:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/071.png")]
+			private var i071:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/06help.png")]
+			private var i06help:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/287.png")]
+			private var i287:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/341.png")]
+			private var i341:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/343.png")]
+			private var i343:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/057s.png")]
+			private var i057s:Class
+			
+			/////////////////////////////////////////
+			
+			private var HELP_URL:String = "http://gain-loss.org/?page_id=715";
+			
+			private var _updater:ApplicationUpdaterUI = new ApplicationUpdaterUI();
+			
+			[Bindable]
+			private var client:GLFTPClient;
+			
+			//private var logwin:WinLog;
+			private var siteManager:SiteManager;
+			private var textInputWin:TextInputWindow;
+			
+			[Bindable]
+			private var writer:GLPureWriter;
+			
+			[Bindable]
+			private var operational:Boolean = false;	//remote operational
+			
+			[Bindable]
+			private var currentLocalDic:File = File.documentsDirectory;
+			[Bindable]
+			private var currentRemotePath:String = "";
+			[Bindable]
+			private var currentRemoteFiles:ArrayCollection = new ArrayCollection();
+			[Bindable]
+			private var glg:GLGroupDownload;
+			[Bindable]
+			private var glu:GLGroupUpload;
+			
+			private function onLoad():void
+			{
+				GLLog.addWriter(GLPureWriter);
+				writer = GLLog.getWriterInstance(GLPureWriter) as GLPureWriter;
+				
+				//updater framework
+				_updater.updateURL = "http://gain-loss.org/wp-content/myprojects/jonftp/update.xml";
+				_updater.isCheckForUpdateVisible = false;
+				_updater.addEventListener(UpdateEvent.INITIALIZED, onUpdateInitializedHandler);
+				_updater.initialize();
+				
+				//client = new GLFTPClient("59.63.41.90");
+				//client.connect();
+				//client.tryInvoke(new GLWelcome());
+				
+				//rlist.addEventListener(RListEvent.DEL, onRemoteListItemToolClickHandler);
+				//rlist.addEventListener(RListEvent.RENAME, onRemoteListItemToolClickHandler);
+				//rlist.addEventListener(RListEvent.DOWNLOAD, onRemoteListItemToolClickHandler);
+				//rlist.addEventListener(MouseEvent.CLICK, onTest, true);
+				//localfsl.addEventListener(LListEvent.UPLOAD, onLocalListItemToolClickHandler);
+			}
+			
+			private function onUpdateInitializedHandler(event:UpdateEvent):void
+			{
+				_updater.checkNow();
+			}
+			
+			/**
+			 * open or close Log window
+			 */ 
+			/* 
+			private function openLogWindow():void
+			{
+				if(logwin==null || logwin.closed)
+				{
+					logwin = new WinLog();
+					logwin.systemChrome = NativeWindowSystemChrome.NONE;
+					logwin.type = NativeWindowType.NORMAL;
+					logwin.open(true);
+				}
+				else
+				{
+					logwin.close();
+				}
+			}*/
+			
+			
+			private function openSiteManager():void
+			{
+				siteManager = PopUpManager.createPopUp(this, SiteManager, true) as SiteManager;
+				PopUpManager.centerPopUp(siteManager);
+				siteManager.addEventListener(SiteManageEvent.LOGIN_OK, onLoginHandler);
+			}
+			
+			private function closeClient():void
+			{
+				if(client)
+				{
+					client.cleanUp();
+				}
+			}
+			
+			/**
+			 * after user login
+			 */ 
+			private function onLoginHandler(event:SiteManageEvent):void
+			{
+				if(client)
+				{
+					client.removeEventListener(GLClientStateEvent.STATE, onClientStateChangedHandler);
+				}
+				
+				//call current dictionary and its files
+				client = event.client;
+				client.addEventListener(GLClientStateEvent.STATE, onClientStateChangedHandler);
+				fetchListInfo();
+			}
+			
+			/**
+			 * state of client
+			 */ 
+			private function onClientStateChangedHandler(event:GLClientStateEvent):void
+			{
+				operational = (client.state==GLClientStateEvent.IDLE);
+				toolBtns.selectedIndex = (client.state == GLClientStateEvent.UNCONNECTED)?0:1;
+			}
+			
+			/**
+			 * local list operations
+			 */ 
+			/*private function onLocalListItemToolClickHandler(event:LListEvent):void
+			{
+				switch(event.type)
+				{
+					case LListEvent.UPLOAD:
+						glu = new GLGroupUpload(event.data, currentRemotePath);
+						client.tryInvoke(glu, fetchListInfo);
+						break;
+				}
+			}*/
+			
+			/**
+			 * remote list operations
+			 */ 
+			/*private function onRemoteListItemToolClickHandler(event:RListEvent):void
+			{
+				switch(event.type)
+				{
+					case RListEvent.RENAME:
+						textInputWin = PopUpManager.createPopUp(this, TextInputWindow, true) as TextInputWindow;
+						PopUpManager.centerPopUp(textInputWin);
+						textInputWin.handlerFunc(function(str:String):void{
+							client.tryInvoke(new GLRename(event.data.name, str), fetchListInfo);
+						}, /^[^\s\/]+$/g, "character [blank] and [/] are not allowed.");
+						break;
+					case RListEvent.DEL:
+						client.tryInvoke(new GLDeleteCommonFile(event.data), function(event:GLFTPEvent):void{
+							client.tryInvoke(new GLChangeDictionary(currentRemotePath), fetchListInfo);
+						});
+						break;
+					case RListEvent.DOWNLOAD:
+						glg = new GLGroupDownload(event.data, currentLocalDic);
+						client.tryInvoke(glg);
+						break;
+				}
+			}*/
+			
+			private function fetchListInfo(eve:GLFTPEvent=null):void
+			{
+				var glist:GLList = new GLList();
+				client.tryInvoke(glist, function(event:GLFTPEvent):void{
+					currentRemoteFiles.source = glist.dicInfos;
+					currentRemotePath = glist.currentDicPath;
+				});
+			}
+			
+			private function changeLocalDic(event:FileEvent):void
+			{
+				currentLocalDic = event.file;
+			}
+			
+			private function changeRemoteDic(dic:String):void
+			{
+				client.tryInvoke(new GLChangeDictionary(dic), fetchListInfo);
+			}
+		]]>
+	</mx:Script>
+	<mx:VBox left="10" right="10" top="10" bottom="10">
+		<mx:HBox id="headBox" width="100%" verticalAlign="middle" mouseDown="this.nativeWindow.startMove()">
+			<mx:Image source="{icon_032}"/>
+			<mx:ViewStack id="toolBtns" selectedIndex="0" width="100%">
+				<mx:HBox verticalAlign="middle" width="100%">
+					<mx:LinkButton label="SiteManager" click="openSiteManager()"/>
+					<mx:VRule height="20" visible="{client}"/>
+					<mx:LinkButton label="TryToConnectAgain" visible="{client}" click="fetchListInfo()"/>
+				</mx:HBox>
+				<mx:HBox verticalAlign="middle" width="100%">
+					<mx:LinkButton label="CloseConnection" click="closeClient()"/>
+				</mx:HBox>
+			</mx:ViewStack>
+			
+			<!--<mx:VRule height="20"/>-->
+			<mx:LinkButton label="Help" toolTip="OnlineHelp" click="flash.net.navigateToURL(new URLRequest(HELP_URL))"/>
+			<mx:LinkButton label="Close" click="this.close()" toolTip="Close Application"/>
+		</mx:HBox>
+		<mx:HDividedBox width="100%" height="100%">
+			<mx:VBox height="100%">
+				<mx:FileSystemComboBox id="localfscb" width="100%" 
+					directory="{currentLocalDic}" 
+					directoryChange="changeLocalDic(event)"/>
+				<mx:HBox width="100%">
+					<mx:LinkButton icon="{blue_arrow_up}" click="localfsl.navigateUp()" toolTip="Up"/>
+					<mx:LinkButton icon="{i017}" click="currentLocalDic=File.desktopDirectory" toolTip="Desktop"/>
+					<mx:LinkButton icon="{i045}" click="currentLocalDic=File.documentsDirectory" toolTip="MyDocuments"/>
+					<mx:LinkButton icon="{i09refresh}" click="localfsl.refresh()" toolTip="Refresh"/>
+					<mx:LinkButton icon="{class_up}" 
+						toolTip="Upload..."
+						enabled="{operational}">
+						<mx:click>
+							<![CDATA[
+								try
+								{
+									infoTabs.selectedIndex = 2;
+									glu = new GLGroupUpload(localfsl.selectedItem as File, currentRemotePath);
+									client.tryInvoke(glu, fetchListInfo);
+								}
+								catch(e:Error)
+								{
+									Alert.show(e.message, "ERROR");
+								}
+							]]>
+						</mx:click>
+					</mx:LinkButton>
+				</mx:HBox>
+				<mx:FileSystemList id="localfsl" width="100%" height="100%" 
+					directory="{currentLocalDic}" 
+					directoryChanging="changeLocalDic(event)" 
+					allowMultipleSelection="false"/>
+			</mx:VBox>
+			<mx:VBox height="100%">
+				<mx:HBox width="100%" verticalAlign="middle">
+					<mx:Label text="Remote:"/>
+					<mx:TextInput id="remotePathField" width="100%" 
+						enabled="{operational}" 
+						text="{currentRemotePath}" 
+						enter="changeRemoteDic(remotePathField.text)"/>
+				</mx:HBox>
+				<mx:HBox width="100%">
+					<mx:LinkButton icon="{blue_arrow_up}" 
+						click="changeRemoteDic(GLChangeDictionary.PARENT_DIC)" 
+						enabled="{operational}" 
+						toolTip="Up"/>
+					<mx:LinkButton icon="{computer_add}" 
+						toolTip="Make New Folder" 
+						enabled="{operational}">
+						<mx:click>
+							<![CDATA[
+								textInputWin = PopUpManager.createPopUp(this, TextInputWindow, true) as TextInputWindow;
+								PopUpManager.centerPopUp(textInputWin);
+								textInputWin.handlerFunc(function(str:String):void{
+									client.tryInvoke(new GLMakeNewFolder(str), fetchListInfo);
+								}, /^[^\s\/]+$/g, "character [blank] and [/] are not allowed.");
+							]]>
+						</mx:click>
+					</mx:LinkButton>
+					<mx:LinkButton icon="{i09refresh}" click="fetchListInfo()" toolTip="Refresh" enabled="{operational}"/>
+					<mx:LinkButton icon="{i055}" 
+						toolTip="Rename" 
+						enabled="{operational}">
+						<mx:click>
+							<![CDATA[
+								textInputWin = PopUpManager.createPopUp(this, TextInputWindow, true) as TextInputWindow;
+								PopUpManager.centerPopUp(textInputWin);
+								textInputWin.handlerFunc(function(str:String):void{
+									try
+									{
+										client.tryInvoke(new GLRename((rlist.selectedItem as GLRemoteFile).name, str), fetchListInfo);
+									}
+									catch(e:Error)
+									{
+										Alert.show("Please select one file/folder before rename", "ERROR");
+									}
+								}, /^[^\s\/]+$/g, "character [blank] and [/] are not allowed.");
+							]]>
+						</mx:click>
+					</mx:LinkButton>
+					<mx:LinkButton icon="{class_down}" 
+						toolTip="Download..."
+						enabled="{operational}">
+						<mx:click>
+							<![CDATA[
+								try
+								{
+									infoTabs.selectedIndex = 1;
+									glg = new GLGroupDownload(rlist.selectedItem as GLRemoteFile, currentLocalDic);
+									client.tryInvoke(glg, function(event:GLFTPEvent):void{
+										localfsl.refresh();
+									});
+								}
+								catch(e:Error)
+								{
+									Alert.show(e.message, "ERROR");
+								}
+							]]>
+						</mx:click>
+					</mx:LinkButton>
+					<mx:LinkButton icon="{i057}" 
+						toolTip="Delete"
+						enabled="{operational}">
+						<mx:click>
+							<![CDATA[
+								try
+								{
+									client.tryInvoke(new GLDeleteCommonFile(rlist.selectedItem as GLRemoteFile), function(event:GLFTPEvent):void{
+										if(event.type == GLFTPEvent.PROCESS_FAIL)
+										{
+											Alert.show(event.errMsg);
+										}
+										client.tryInvoke(new GLChangeDictionary(currentRemotePath), fetchListInfo);
+									});
+								}
+								catch(e:Error)
+								{
+									Alert.show(e.message, "ERROR");
+								}
+							]]>
+						</mx:click>
+					</mx:LinkButton>
+				</mx:HBox>
+				<mx:List id="rlist" width="100%" height="100%" 
+					dataProvider="{currentRemoteFiles}" 
+					enabled="{operational}" 
+					itemDoubleClick="changeRemoteDic((event.itemRenderer.data as GLRemoteFile).url)" 
+					doubleClickEnabled="true" 
+					allowMultipleSelection="false">
+					<mx:itemRenderer>
+						<mx:Component>
+							<mx:HBox width="100%" verticalAlign="middle" horizontalScrollPolicy="off">
+								<mx:Script>
+									<![CDATA[
+										import org.gainloss.asftp.utils.GLRemoteFile;
+										
+										[Bindable]
+										[Embed("/mysource/imgs/file.png")]
+										private var fileIcon:Class
+										
+										[Bindable]
+										[Embed("/mysource/imgs/dic.png")]
+										private var dicIcon:Class
+									]]>
+								</mx:Script>
+								<mx:Image source="{(data.type=='d'||data.type=='l')?dicIcon:fileIcon}"/>
+								<mx:Label text="{data.name}" 
+									toolTip="{'FileName: '+data.name+'\nSize: '+data.size+' Bytes'}"/>
+							</mx:HBox>
+						</mx:Component>
+					</mx:itemRenderer>
+				</mx:List>
+				<!--
+				<ui:RemoteFileList id="rlist" 
+					width="100%" height="100%" 
+					dataProvider="{currentRemoteFiles}" 
+					Remote_Item_Double_Click="changeRemoteDic(event.data.name)" 
+					enabled="{operational}"/>-->
+			</mx:VBox>
+		</mx:HDividedBox>
+		<mx:TabNavigator id="infoTabs" width="100%" height="170">
+			<mx:HBox icon="{i287}" label="Log" width="100%" height="100%">
+				<!--<mx:VBox>
+					<mx:LinkButton icon="{i057s}" toolTip="Clear"/>
+				</mx:VBox>-->
+				<mx:TextArea id="logArea" width="100%" height="100%"
+					editable="false" 
+					borderStyle="solid" 
+					text="{writer.wholeMsgs}">
+					<mx:updateComplete>
+						<![CDATA[
+							logArea.verticalScrollPosition = logArea.maxVerticalScrollPosition;
+						]]>
+					</mx:updateComplete>
+				</mx:TextArea>
+			</mx:HBox>
+			<mx:Canvas icon="{i341}" label="DownloadQueue" width="100%" height="100%">
+				<ui:GLDownloadUploadList width="100%" height="100%" dataProvider="{glg.downloadingList}"/>
+			</mx:Canvas>
+			<mx:Canvas icon="{i343}" label="UploadQueue" width="100%" height="100%">
+				<ui:GLDownloadUploadList width="100%" height="100%" dataProvider="{glu.uploadingList}"/>
+			</mx:Canvas>
+		</mx:TabNavigator>
+	</mx:VBox>
+</mx:WindowedApplication>
