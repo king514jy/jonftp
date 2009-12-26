@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:List xmlns:mx="http://www.adobe.com/2006/mxml">
+	
+	<mx:itemRenderer>
+		<mx:Component>
+			<mx:HBox width="100%" verticalAlign="middle">
+				<mx:Script>
+					<![CDATA[
+						[Bindable]
+						[Embed("/mysource/imgs/file.png")]
+						private var fileIcon:Class
+						
+						[Bindable]
+						[Embed("/mysource/imgs/dic.png")]
+						private var dicIcon:Class
+						
+						public override function set data(value:Object):void
+						{
+							if(value)
+							{
+								super.data = value;
+								//trace(data.downloadedBytes+" "+data.file.size)
+								fileProg.setProgress(data.downloadedBytes/data.file.size*100, 100);
+							}
+						}
+					]]>
+				</mx:Script>
+				<mx:HBox width="60%" toolTip="{data.file.url}">
+					<!--<mx:Image source="{(data.file.type=='d')?dicIcon:fileIcon}"/>-->
+					<mx:Label text="{data.file.name}"/>
+				</mx:HBox>
+				<mx:ProgressBar id="fileProg" labelPlacement="center" width="100%" maximum="100" minimum="0" mode="manual"/>
+			</mx:HBox>
+		</mx:Component>
+	</mx:itemRenderer>
+</mx:List>

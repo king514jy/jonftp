@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" 
+	width="448" 
+	height="446" 
+	title="SiteManager" 
+	showCloseButton="true" 
+	close="closeMe()" 
+	creationComplete="onLoad()" 
+	verticalScrollPolicy="off" 
+	horizontalScrollPolicy="off">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.validators.StringValidator;
+			import mx.events.ValidationResultEvent;
+			import mx.events.ListEvent;
+			import mx.collections.ArrayCollection;
+			import org.gainloss.utils.events.SiteManageEvent;
+			import org.gainloss.asftp.process.GLChangeDictionary;
+			import org.gainloss.utils.UserRecord;
+			import org.gainloss.asftp.events.GLFTPEvent;
+			import org.gainloss.asftp.GLFTPClient;
+			
+			import mx.managers.PopUpManager;
+			import mx.controls.Alert;
+			
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/062.png")]
+			private var i062:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/015.png")]
+			private var i015:Class
+			
+			[Bindable]
+			[Embed("mysource/imgs/GSmall/028.png")]
+			private var i028:Class
+			
+			private var client:GLFTPClient;
+			
+			//user's record
+			//private var selectedRecord:UserRecord = UserRecord.createFromSO();
+			
+			[Bindable]
+			private var siteNames:ArrayCollection;
+			private const THEFIRSTITEM:String = "<NEW>";
+			private const ANONYMOUES:String = "anonymouse";
+			
+			private var siteNameWin:TextInputWindow;
+			
+			
+			//private var _validator:StringValidator = new StringValidator();
+			
+			/**
+			 * close this window
+			 */ 
+			private function closeMe():void
+			{
+				PopUpManager.removePopUp(this);
+			}
+			
+			/**
+			 * program begins
+			 * 
+			 * @param _index
+			 */ 
+			private function onLoad(_index:int = -1):void
+			{
+				//nothing
+				/*
+				hostField.text = selectedRecord.host;
+				portField.value = selectedRecord.port;
+				usernameField.text = selectedRecord.username;
+				*/
+				
+				//_validator.required = true;
+				//_validator.requiredFieldError = "Field can not be empty";
+				
+				siteNames = new ArrayCollection(UserRecord.createRecordsFromSO());
+				siteNames.addItemAt(THEFIRSTITEM, 0);
+				
+				if(_index < 0)
+				{
+					siteSelector.selectedIndex = 0;
+				}
+				else
+				{
+					siteSelector.selectedIndex = _index
+				}
+				
+				callLater(onChooseOneSiteHandler);
+			}
+			
+			/**
+			 * change site
+			 */ 
+			private function onChooseOneSiteHandler(event:ListEvent=null):void
+			{
+				if(siteSelector.selectedItem != THEFIRSTITEM)
+				{
+					//var selectedRecord:UserRecord = siteSelector.selectedItem as UserRecord;
+					hostField.text = siteSelector.selectedItem["site_host"];
+					portField.value = siteSelector.selectedItem["site_port"];
+					usernameField.text = siteSelector.selectedItem["site_username"];
+					pwdField.text = "";
+					
+				}
+				else
+				{
+					hostField.text = "";
+					portField.value = 21;
+					usernameField.text = "";
+					pwdField.text = "";
+				}
+				
+				//change focus
+				if(hostField.text == "")
+				{
+					hostField.setFocus();
+				}
+				else if(usernameField.text == "")
+				{
+					usernameField.setFocus();
+				}
+				else
+				{
+					pwdField.setFocus();
+				}
+			}
+			
+			/**
+			 * connect to server
+			 */ 
+			private function connect():void
+			{
+				//validate
+				if(hostVald.validate().type == ValidationResultEvent.VALID)
+				{
+					client = new GLFTPClient(usernameField.text, pwdField.text, hostField.text, portField.value);
+					//client.startToConnect();
+					//after login
+					var eve:SiteManageEvent = new SiteManageEvent(SiteManageEvent.LOGIN_OK);
+					eve.client = this.client;
+					this.dispatchEvent(eve);
+					closeMe();
+				}
+			}
+			
+			/**
+			 * rename site
+			 */ 
+			private function rename():void
+			{
+				siteNameWin = PopUpManager.createPopUp(this, TextInputWindow, true) as TextInputWindow;
+				PopUpManager.centerPopUp(siteNameWin);
+				siteNameWin.handlerFunc(toRename);
+			}
+			
+			/**
+			 * rename current record
+			 */ 
+			private function toRename(rn:String):void
+			{
+				//var ur:UserRecord = siteSelector.selectedItem as UserRecord;
+				//ur.siteName = rn;
+				//UserRecord.removeUserRecord(siteSelector.selectedIndex-1);
+				//toSaveRecord(rn);
+				UserRecord.renameUserRecord(siteSelector.selectedItem["site_id"], rn);
+				
+				//reload
+				onLoad(siteNames.length);
+				
+				//After rename
+				Alert.show("Site was renamed");
+			}
+			
+			/**
+			 * delete record
+			 */ 
+			private function toDelRecord():void
+			{
+				UserRecord.removeUserRecord(siteSelector.selectedItem["site_id"])//(siteSelector.selectedIndex-1);
+				onLoad();	
+			}
+			
+			/**
+			 * create new
+			 */ 
+			private function saveRecord():void
+			{
+				siteNameWin = PopUpManager.createPopUp(this, TextInputWindow, true) as TextInputWindow;
+				PopUpManager.centerPopUp(siteNameWin);
+				siteNameWin.handlerFunc(toSaveRecord);
+			}
+			
+			/**
+			 * create new
+			 * 
+			 * @param sn	site name
+			 */ 
+			private function toSaveRecord(sn:String):void
+			{
+				var ur:UserRecord = new UserRecord();
+				ur.siteName = sn;
+				ur.host = hostField.text;
+				ur.port = portField.value;
+				ur.username = usernameField.text;
+				
+				UserRecord.saveRecord(ur);
+				
+				//reload
+				onLoad(siteNames.length);
+				
+				//After save
+				Alert.show("New site was created");
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Metadata>
+		[Event(name="LOGIN_OK", type="org.gainloss.utils.events.SiteManageEvent")]
+	</mx:Metadata>
+	
+	<mx:StringValidator id="hostVald" 
+		source="{hostField}" 
+		property="text" 
+		required="true" 
+		requiredFieldError="This field is required" 
+		trigger="{hostField}" triggerEvent="change"/>
+	
+	<mx:VBox top="10" bottom="10" right="10" left="10" 
+		verticalScrollPolicy="off" 
+		horizontalScrollPolicy="off">
+		<mx:VBox styleName="boardBox" width="100%">
+			<mx:HBox width="100%">
+				<mx:Label id="siteLabel" text="Site:"/>
+				<mx:ComboBox width="100%" id="siteSelector" labelField="site_name" dataProvider="{siteNames}" change="onChooseOneSiteHandler(event)"/>
+			</mx:HBox>
+			<mx:HBox>
+				<mx:Spacer width="{siteLabel.width}"/>
+				<!--<mx:LinkButton label="Save" toolTip="Save (not including saving your password)"/>-->
+				<mx:LinkButton label="Rename" click="rename()" enabled="{siteSelector.selectedItem!=THEFIRSTITEM}"/>
+				<mx:LinkButton label="Del" click="toDelRecord()" enabled="{siteSelector.selectedItem!=THEFIRSTITEM}"/>
+				<!--<mx:LinkButton label="DelAll" click="UserRecord.clearAllRecords();onLoad()"/>-->
+			</mx:HBox>
+		</mx:VBox>
+		
+		<mx:Form width="100%" height="100%">
+			<mx:FormItem label="Host:">
+				<mx:TextInput id="hostField"/>
+			</mx:FormItem>
+			<mx:FormItem label="Port:">
+				<mx:NumericStepper id="portField" maximum="9999" minimum="1" value="21"/>
+			</mx:FormItem>
+			<!--<mx:FormItem>
+				<mx:ComboBox>
+					<mx:dataProvider>
+						<mx:String>Ask For Password</mx:String>
+						<mx:String>Anonymouse</mx:String>
+					</mx:dataProvider>
+				</mx:ComboBox>
+			</mx:FormItem>-->
+			<mx:FormItem label="Username:">
+				<mx:TextInput id="usernameField"/>
+			</mx:FormItem>
+			<mx:FormItem label="Password:">
+				<mx:TextInput id="pwdField" displayAsPassword="true" enter="connect()"/>
+			</mx:FormItem>
+		</mx:Form>
+		<mx:HBox width="100%" horizontalAlign="center" verticalAlign="middle">
+			<mx:Button label="Connect" icon="{i062}" click="connect()" toolTip="Connect to FTP server"/>
+			<mx:Button label="Save" icon="{i028}" click="saveRecord()" toolTip="Save (not including saving your password)"/>
+			<mx:Button label="Cancel" icon="{i015}" click="closeMe()"/>
+		</mx:HBox>
+	</mx:VBox>
+</mx:TitleWindow>
