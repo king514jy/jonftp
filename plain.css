@@ -9,7 +9,7 @@ global
 
 CursorManager
 {
-	busy-cursor: Embed("assets/UndefinedPersonalSkinLoad.swf");
+	busy-cursor: Embed("mysource/imgs/UndefinedPersonalSkinLoad.swf");
 } 
 
 LinkButton
